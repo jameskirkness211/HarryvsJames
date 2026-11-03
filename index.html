@@ -212,7 +212,7 @@ footer{margin-top:36px;font-size:.8rem;color:var(--muted)}
 
   <h2>The detail</h2>
   <details class="more"><summary>Strength<span>five lifts, 5 points each</span></summary><div class="inner">
-  <p class="muted small">Each lift is worth 5 points, split by effective % gain on estimated 1RM (best 3–10 rep set; reps for leg raises). The bar runs from each person's baseline: the lighter stretch up to their previous best only counts at half value. Latest = best of the most recent two weeks.</p>
+  <p class="muted small">Each lift is worth 5 points, split by effective % gain on estimated 1RM (best 3–10 rep set; reps for leg raises). The bar runs from each person's baseline: the lighter stretch up to their previous best only counts at half value. The set shown is each person's best from the most recent two weeks, which is the one being scored.</p>
   <div class="lifts" id="lifts"></div>
 
   </div></details>
@@ -326,6 +326,13 @@ document.documentElement.classList.add("public");})();
     return best;
   }
   function latestRow(p,k){var rows=weekRows(p).filter(function(w){return liftScore(w,k)!==null});return rows.length?rows[rows.length-1]:null}
+  // the row behind resultLift: the set actually being scored
+  function bestRow(p,k){
+    var rows=scored(p);if(!rows.length)return null;
+    var last=num(rows[rows.length-1].week),best=null,row=null;
+    rows.forEach(function(w){if(num(w.week)>=last-1){var s=liftScore(w,k);if(s!==null&&(best===null||s>best)){best=s;row=w}}});
+    return row;
+  }
   function setText(w,k){
     function n(v){v=num(v);return v===null?"?":(Math.round(v*10)/10).toString()}
     switch(k){
@@ -479,7 +486,7 @@ document.documentElement.classList.add("public");})();
       PEOPLE.forEach(function(p){
         var x=L[p],u=L.k==="hlr"?" reps":" kg",cls=p==="james"?"j":"h",w=el("div",{class:"who "+cls});
         w.appendChild(el("div",{class:"nm"},NAME[p]));
-        var lw=latestRow(p,L.k);
+        var lw=bestRow(p,L.k)||latestRow(p,L.k);
         w.appendChild(el("div",{class:"set"},lw?setText(lw,L.k)+" (wk "+String(lw.week).padStart(2,"0")+")":"no set yet"));
         w.appendChild(el("div",{class:"gain"},x.g===null?"–":pct(x.g)));
         var raw=(x.base!==null&&x.res!==null&&x.base>0)?(x.res-x.base)/x.base*100:null;
@@ -487,7 +494,7 @@ document.documentElement.classList.add("public");})();
         // track: baseline at 0, scale to the larger of prev best / latest / +15%
         if(x.base!==null){
           var hi=Math.max(x.base*1.15,x.prev||0,x.res||0),span=hi-x.base,pos=function(v){return Math.max(0,Math.min(100,(v-x.base)/span*100))};
-          var tr=el("div",{class:"track",role:"img","aria-label":NAME[p]+" "+L.n+": baseline "+f1(x.base)+", latest "+(x.res===null?"none":f1(x.res))+(x.prev!==null?", previous best "+f1(x.prev):"")});
+          var tr=el("div",{class:"track",role:"img","aria-label":NAME[p]+" "+L.n+": baseline "+f1(x.base)+", scored "+(x.res===null?"none":f1(x.res))+(x.prev!==null?", previous best "+f1(x.prev):"")});
           if(x.prev!==null&&x.prev>x.base){var hz=el("i",{class:"half"});hz.style.width=pos(x.prev)+"%";tr.appendChild(hz)}
           if(x.res!==null&&x.res>x.base){var pg=el("i",{class:"prog"});pg.style.width=pos(x.res)+"%";tr.appendChild(pg)}
           if(x.prev!==null&&x.prev>x.base){var mk=el("i",{class:"pb"});mk.style.left="calc("+pos(x.prev)+"% - 1px)";tr.appendChild(mk)}
@@ -497,7 +504,7 @@ document.documentElement.classList.add("public");})();
           tl.appendChild(el("span",null,x.prev!==null?"prev best "+f1(x.prev):"no prev best"));
           w.appendChild(tl);
         }else w.appendChild(el("div",{class:"kv pending"},"baseline pending"));
-        w.appendChild(el("div",{class:"kv"},"latest "+(x.res===null?"–":f1(x.res)+u)+(L.k==="hlr"?"":" e1RM")));
+        w.appendChild(el("div",{class:"kv"},(L.k==="hlr"?"scored ":"estimated 1RM ")+(x.res===null?"–":f1(x.res)+u)+(L.k==="pullup"?" incl. bodyweight":"")));
         var hist=weekRows(p).map(function(wk){var v=liftScore(wk,L.k);return v===null?null:"wk"+wk.week+" "+f1(v)}).filter(Boolean);
         if(hist.length)w.appendChild(el("div",{class:"hist"},hist.join(" · ")));
         pp.appendChild(w);
